@@ -1,0 +1,66 @@
+#Load the packages
+library(ggplot2)
+library(ggrepel)
+
+
+#Load the data for plotting
+phospho <- read.csv("C:/Users/seony/Documents/Data/Phosphoproteomics LC-MSMS/TgIPP2_phosphoproteome_DEP.csv")
+
+
+#Convert the p-value into a -log10(p-value) & Add more simple "theme"
+p <- ggplot(data=phospho, aes(x=log2(Fold.change), y=-log10(p.value), col=diffphospho)) + geom_point() + theme_minimal()
+p
+
+
+#Add vertical lines for log2(Fold.change) thresholds, and one horizontal line for the p-value threshold
+p2 <- p + geom_vline(xintercept=c(-1, 1), col="black") + geom_hline(yintercept=-log10(0.05), col="black")
+p2
+
+
+# The significantly differentially phosphorylated proteins are the ones found in the upper-left and upper-right corners.
+# Add a column to the data frame to specify if they are UP- or DOWN- regulated (log2FoldChange respectively positive or negative)
+
+#Add a column of NAs
+phospho$diffphospho <- "NO"
+
+#If log2Foldchange > 1 and p-value < 0.05, set as "UP" 
+phospho$diffphospho[phospho$Fold.change > 2 & phospho$p.value < 0.05] <- "UP"
+
+#If log2Foldchange < -1 and p-value < 0.05, set as "DOWN"
+phospho$diffphospho[phospho$Fold.change < 0.5 & phospho$p.value < 0.05] <- "DOWN"
+
+
+#Re-plot but this time color the points with "diffphospho"
+p <- ggplot(data=phospho, aes(x=log2(Fold.change), y=-log10(p.value), col=diffphospho)) + geom_point() + theme_minimal()
+p
+
+#Add lines as before...
+p2 <- p + geom_vline(xintercept=c(-1, 1), col="black", lty=2) + geom_hline(yintercept=-log10(0.05), col="black", lty=2)
+p2
+
+
+#Change point color 
+#By default, it is assigned to the categories in an alphabetical order):
+p3 <- p2 + scale_color_manual(values=c("blue", "black", "red"))
+p3
+
+
+#Now write down the name of genes beside the points...
+#Create a new column "label" to phospho, that will contain the name of genes differentially phosphorylated (NA in case they are not)
+phospho$delabel <- NA
+phospho$delabel[phospho$diffphospho != "NO"] <- phospho$Gene.symbol[phospho$diffphospho != "NO"]
+
+
+-----------------------------------------------------------------------------------------------------------------------------------------
+
+
+#Plot adding up all layers
+options(ggrepel.max.overlaps = Inf)
+  
+ggplot(data=phospho, aes(x=log2(Fold.change), y=-log10(p.value), col=diffphospho, label=delabel)) +
+  geom_point() + 
+  theme_minimal() +
+  geom_text_repel() +
+  scale_color_manual(values=c("blue", "gray", "red")) +
+  geom_vline(xintercept=c(-1, 1), col="black", lty=2) +
+  geom_hline(yintercept=-log10(0.05), col="black", lty=2)
